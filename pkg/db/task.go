@@ -128,3 +128,25 @@ func UpdateTask(task *Task) error {
 
 	return nil
 }
+
+// DeleteTask удаляет задачу из БД по её идентификатору
+func DeleteTask(id string) error {
+	if DB == nil {
+		return fmt.Errorf("база данных не инициализирована")
+	}
+
+	res, err := DB.Exec(`DELETE FROM scheduler WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return fmt.Errorf("задача не найдена")
+	}
+
+	return nil
+}
