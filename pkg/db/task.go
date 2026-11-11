@@ -28,6 +28,7 @@ func AddTask(task *Task) (int64, error) {
 
 	return res.LastInsertId()
 }
+
 // Tasks возвращает список ближайших задач.
 // Если передана строка search, фильтрует по дате или тексту (title/comment).
 func Tasks(search string, limit int) ([]Task, error) {
@@ -77,10 +78,53 @@ func Tasks(search string, limit int) ([]Task, error) {
 		t.ID = fmt.Sprintf("%d", idInt)
 		tasks = append(tasks, t)
 	}
-	
+
 	if err := rows.Err(); err != nil {
 		return tasks, err
 	}
 
 	return tasks, nil
+}
+
+// GetTask возвращает задачу по её идентификатору
+func GetTask(id string) (Task, error) {
+	var t Task
+	if DB == nil {
+		return t, fmt.Errorf("база данных не инициализирована")
+	}
+
+	query := `SELECT id, date, title, comment, repeat FROM scheduler WHERE id = ?`
+	row := DB.QueryRow(query, id)
+
+	var idInt int64
+	err := row.Scan(&idInt, &t.Date, &t.Title, &t.Comment, &t.Repeat)
+	if err != nil {
+		return t, err // Если запись не найдена, вернётся sql.ErrNoRows
+	}
+	t.ID = fmt.Sprintf("%d", idInt)
+
+	return t, nil
+}
+
+// UpdateTask обновляет существующую задачу в БД
+func UpdateTask(task *Task) error {
+	if DB == nil {
+		return fmt.Errorf("база данных не инициализирована")
+	}
+
+	query := `UPDATE scheduler SET date = ?, title = ?, comment = ?, repeat = ? WHERE id = ?`
+	res, err := DB.Exec(query, task.Date, task.Title, task.Comment, task.Repeat, task.ID)
+	if err != nil {
+		return err
+	}
+
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return fmt.Errorf("задача не найдена")
+	}
+
+	return nil
 }

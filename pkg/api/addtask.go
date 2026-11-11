@@ -18,7 +18,7 @@ func writeJSON(w http.ResponseWriter, status int, data any) {
 
 func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var task db.Task
-	
+
 	// 1. Десериализуем JSON
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Ошибка десериализации JSON"})
