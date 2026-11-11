@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/semenoff1993-afk/go-final-project13/pkg/api" // <- Добавили импорт API
 )
 
 // Start настраивает и запускает веб-сервер
@@ -12,6 +14,9 @@ func Start() {
 	if port == "" {
 		port = "7540"
 	}
+
+	// Регистрируем API-обработчики
+	api.Init() // <- Добавили вызов Init из API
 
 	webDir := "./web"
 	http.Handle("/", http.FileServer(http.Dir(webDir)))
