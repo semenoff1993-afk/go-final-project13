@@ -10,6 +10,10 @@ import (
 
 // nextDateHandler обрабатывает GET-запрос /api/nextdate
 func nextDateHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		return
+	}
 	nowStr := r.FormValue("now")
 	dateStr := r.FormValue("date")
 	repeat := r.FormValue("repeat")
@@ -50,6 +54,9 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
 	parts := strings.Fields(repeat)
+	if len(parts) == 0 {
+		return "", fmt.Errorf("правило повторения не указано или имеет неверный формат")
+	}
 	rule := parts[0]
 
 	switch rule {

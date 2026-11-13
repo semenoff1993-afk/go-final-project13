@@ -3,8 +3,8 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
-	"time"
 
 	"github.com/semenoff1993-afk/go-final-project13/pkg/db"
 )
@@ -13,7 +13,9 @@ import (
 func writeJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		log.Printf("ошибка при кодировании JSON: %v", err)
+	}
 }
 
 func addTaskHandler(w http.ResponseWriter, r *http.Request) {
@@ -31,41 +33,13 @@ func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := time.Now()
-	// Сбрасываем время до нулей, чтобы корректно сравнивать только даты
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-
-	// 3. Обрабатываем дату
-	if task.Date == "" {
-		task.Date = today.Format(DateFormat)
-	}
-
-	t, err := time.Parse(DateFormat, task.Date)
+	// 3. Обрабатываем дату через общую функцию
+	processedDate, err := processDate(task.Date, task.Repeat)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Дата представлена в неверном формате"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-
-	// Проверяем прошлые даты и правила повторения
-	if t.Before(today) {
-		if task.Repeat == "" {
-			task.Date = today.Format(DateFormat)
-		} else {
-			next, err := NextDate(now, task.Date, task.Repeat)
-			if err != nil {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("Ошибка правила повторения: %v", err)})
-				return
-			}
-			task.Date = next
-		}
-	} else if task.Repeat != "" {
-		// Даже если дата в будущем, правило повторения нужно валидировать
-		_, err := NextDate(now, task.Date, task.Repeat)
-		if err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("Ошибка правила повторения: %v", err)})
-			return
-		}
-	}
+	task.Date = processedDate
 
 	// 4. Добавляем в БД
 	id, err := db.AddTask(&task)

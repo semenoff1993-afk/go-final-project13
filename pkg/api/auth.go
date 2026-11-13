@@ -11,6 +11,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// Считываем пароль один раз при старте приложения
+var expectedPass = os.Getenv("TODO_PASSWORD")
+
 var jwtSecret = []byte("super_secret_key_todo_app")
 
 // getPassHash создаёт хэш пароля для хранения в токене
@@ -22,7 +25,6 @@ func getPassHash(pass string) string {
 
 // signinHandler обрабатывает POST-запрос на /api/signin
 func signinHandler(w http.ResponseWriter, r *http.Request) {
-	expectedPass := os.Getenv("TODO_PASSWORD")
 	if expectedPass == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Аутентификация не настроена"})
 		return
@@ -58,8 +60,7 @@ func signinHandler(w http.ResponseWriter, r *http.Request) {
 // authMiddleware проверяет наличие и валидность токена при каждом запросе
 func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		pass := os.Getenv("TODO_PASSWORD")
-		if len(pass) > 0 {
+		if len(expectedPass) > 0 {
 			var jwtStr string
 			cookie, err := r.Cookie("token")
 			if err == nil {
@@ -87,7 +88,7 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			}
 
 			hash, ok := claims["hash"].(string)
-			if !ok || hash != getPassHash(pass) {
+			if !ok || hash != getPassHash(expectedPass) {
 				http.Error(w, "Authentification required", http.StatusUnauthorized)
 				return
 			}

@@ -1,6 +1,8 @@
 package api
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -24,7 +26,11 @@ func doneTaskHandler(w http.ResponseWriter, r *http.Request) {
 	// 1. Получаем задачу
 	task, err := db.GetTask(id)
 	if err != nil {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Ошибка базы данных"})
 		return
 	}
 

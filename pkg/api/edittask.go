@@ -3,9 +3,8 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
-	"time"
 
 	"github.com/semenoff1993-afk/go-final-project13/pkg/db"
 )
@@ -51,43 +50,18 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := time.Now()
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-
-	// 3. Обрабатываем дату (логика как в POST)
-	if task.Date == "" {
-		task.Date = today.Format(DateFormat)
-	}
-
-	t, err := time.Parse(DateFormat, task.Date)
+	// 3. Обрабатываем дату через общую функцию
+	processedDate, err := processDate(task.Date, task.Repeat)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Дата представлена в неверном формате"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-
-	if t.Before(today) {
-		if task.Repeat == "" {
-			task.Date = today.Format(DateFormat)
-		} else {
-			next, err := NextDate(now, task.Date, task.Repeat)
-			if err != nil {
-				writeJSON(w, http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("Ошибка правила повторения: %v", err)})
-				return
-			}
-			task.Date = next
-		}
-	} else if task.Repeat != "" {
-		_, err := NextDate(now, task.Date, task.Repeat)
-		if err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("Ошибка правила повторения: %v", err)})
-			return
-		}
-	}
+	task.Date = processedDate
 
 	// 4. Обновляем задачу в БД
 	err = db.UpdateTask(&task)
 	if err != nil {
-		if err.Error() == "задача не найдена" {
+		if errors.Is(err, db.ErrTaskNotFound) {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
 		} else {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении задачи"})

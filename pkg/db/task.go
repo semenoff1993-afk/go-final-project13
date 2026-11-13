@@ -1,9 +1,15 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
+
+const TasksLimit = 50
+
+// ErrTaskNotFound означает, что запрашиваемая задача отсутствует в базе данных
+var ErrTaskNotFound = errors.New("задача не найдена")
 
 // Task описывает структуру задачи для работы с JSON и БД
 type Task struct {
@@ -123,7 +129,7 @@ func UpdateTask(task *Task) error {
 		return err
 	}
 	if count == 0 {
-		return fmt.Errorf("задача не найдена")
+		return ErrTaskNotFound
 	}
 
 	return nil
@@ -145,7 +151,7 @@ func DeleteTask(id string) error {
 		return err
 	}
 	if count == 0 {
-		return fmt.Errorf("задача не найдена")
+		return ErrTaskNotFound
 	}
 
 	return nil

@@ -41,6 +41,7 @@ func Init(dbFile string) error {
 		`
 		_, err = DB.Exec(schema)
 		if err != nil {
+			DB.Close() // Закрываем коннект, чтобы не было утечки памяти
 			return err
 		}
 		log.Println("Файл базы данных и таблица scheduler успешно созданы.")
